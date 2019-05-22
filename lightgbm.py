@@ -4,6 +4,7 @@
 
 # 重新编写lgb模型
 import pandas as pd
+#读取训练集
 test_sampledf_origin= pd.read_csv('E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\sample\\sample_total_no0_typeStatisticAll_1hot.csv'
                            ,sep='\t',low_memory=False)
 
