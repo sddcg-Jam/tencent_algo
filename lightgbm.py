@@ -1,15 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
-
 
 # 重新编写lgb模型
-
-
-# In[4]:
-
-
 import pandas as pd
 test_sampledf_origin= pd.read_csv('E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\sample\\sample_total_no0_typeStatisticAll_1hot.csv'
                            ,sep='\t',low_memory=False)
@@ -30,8 +23,6 @@ del test_sampledf_origin
 
 import time
 Btest_sample_newdf= pd.read_csv('E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\Btest_sample_new_post.dat ',sep='\t')
-#,                             names=['样本id','广告id','创建时间','素材尺寸','广告行业id' ,'商品类型','商品id','广告账号id','投放时间','人群定向'
-#                                                            ,'出价']
 
 Btest_sample_newdf.drop(['样本id'],axis=1,inplace=True)
 Btest_sample_newdf['曝光日期']=Btest_sample_newdf['创建时间'].apply(lambda x: 321 if (x<20190321) else (x+1)-20190000 )
@@ -40,15 +31,6 @@ Btest_sample_newdf['创建时间']=Btest_sample_newdf['创建时间'].apply(lamb
 Btest_sample_newdf['曝光次数']=-999
 Btest_sample_newdf=Btest_sample_newdf[origin_features]
 Btest_sample_newdf['istest']=True
-
-
-# In[8]:
-
-
-test_sampledf.shape
-
-
-# In[9]:
 
 
 all_test_sampledf=test_sampledf.append(Btest_sample_newdf)
@@ -82,27 +64,6 @@ test_sampledf=all_test_sampledf[all_test_sampledf['istest']==False]
 test_sampledf.drop(['istest'],axis=1,inplace=True)
 Btest_sample_newdf=all_test_sampledf[all_test_sampledf['istest']==True]
 Btest_sample_newdf.drop(['istest'],axis=1,inplace=True)
-
-
-# In[13]:
-
-
-# import lightgbm as lgb
-# label=test_sampledf['曝光次数'].reset_index(drop=True)
-# test_sampledf.drop(['曝光次数'],axis=1,inplace=True)
-# train_data = lgb.Dataset(test_sampledf, label=label, feature_name=['广告id','创建时间','素材尺寸','广告行业id','商品类型','商品id','广告账号id','投放时间','人群定向',
-#                  '出价','星期','曝光日期'], categorical_feature=['广告id','创建时间','素材尺寸','广告行业id','商品类型','商品id','广告账号id','投放时间','人群定向',
-#                  '星期','曝光日期'])
-
-
-# In[ ]:
-
-
-
-
-
-# In[26]:
-
 
 x_train=pd.DataFrame()
 x_train=test_sampledf[(test_sampledf['曝光日期'] !=319)] # &(test_sampledf['曝光日期'] !=0)  &(data_tr['曝光次数'] !=0)
@@ -231,7 +192,7 @@ B_sample[B_sample['曝光次数']<0].sort_values(by=['广告id','出价'])
 # In[55]:
 
 
-# 不符合单调性,所以只取出价在第五位的曝光次数,其余的进行变动
+# 不符合单调性,所以进行变动
 B_sample['出价排序']=B_sample['出价'].groupby(B_sample['广告id']).rank(ascending=1,method='dense')
 B_sample.reset_index()
 
@@ -268,13 +229,11 @@ print(str(number))
 
 
 #后处理
-#82.9933到83.0338  四舍五入 后处理再做单调性 rank/10000,  round()函数
-# 尝试*2后四舍五入,发现线上分数降低了将近2分
 
 B_sample['出价排序']=B_sample['出价'].groupby(B_sample['广告id']).rank(ascending=1,method='dense')
 B_sample['new曝光']=B_sample.apply(lambda x: (round(x['曝光次数'])+x['出价排序']/10000)  ,axis=1).round(decimals=4)
 
-#不在投放时间的广告样本id , 83.02提分 83.028
+#不在投放时间的广告样本id 
 list=[ 118,  2149,  2301,  3672,  4091,  4332,  4567,  4710,  5302,        6427,  6448,  6588,  6688,  6967,  7264,  7521,  8723,  8832,        8901,  9285,  9403,  9907, 10084, 10268, 10650, 11167, 12083,       13285, 13500, 13539, 13797, 13951, 14089, 15127, 15382, 15624,       15839, 16316, 16633, 16688, 17658, 18009, 18075, 18177, 18835,       19491, 20040, 20617, 20642, 21473, 22139, 22229, 23203, 24952,       25197, 26594, 27125, 27680, 27784, 29265, 30155, 30382, 33647,       33758, 34032, 34465, 34721, 35070, 35520, 36413, 36822, 36906,       37025, 37630, 37736]
 B_sample['new曝光']=B_sample.apply(lambda x: x['出价排序']/10000 if x['样本id'] in list else x['new曝光'],axis=1)
 B_sample['new曝光']=B_sample['new曝光']
@@ -287,85 +246,3 @@ B_sample.to_csv("E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\submissi
 
 
 B_sample['new曝光1'].describe()
-
-
-# In[65]:
-
-
-# 与NN模型再取均值
-nn_result= pd.read_csv('E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\submission\\0520\\submission-82.7053.csv',sep=',',
-                             header=None,names=['样本id','曝光次数'])
-B_sample['82.7053']=nn_result['曝光次数']
-B_sample['new曝光1']=(B_sample['82.7053']*2+B_sample['new曝光'])/3
-
-B_sample.to_csv("E:\\work\\tencent\\algo.qq.com_641013010_testa\\testA\\submission\\0520\\submission.csv",sep=",",
-                    index=False,encoding="utf-8",header=False,columns=["样本id","new曝光1"])
-
-
-# In[ ]:
-
-
-# 一段新代码,K折验证
-import numpy as np
-from sklearn import metrics
-from sklearn import model_selection
- 
-np.random.seed(42) 
-model = lgb.LGBMRegressor(
-    objective='regression',
-    max_depth=-1,
-    num_leaves=25,
-    learning_rate=0.05,
-    n_estimators=1000,
-    min_child_samples=80,
-    #min_child_weight=50,
-    subsample=0.7,
-    colsample_bytree=0.7,
-    reg_alpha=0,
-    reg_lambda=0,
-    random_state=np.random.randint(10e6)
-)
- 
-n_splits = 5
-cv = model_selection.KFold(n_splits=n_splits, shuffle=True, random_state=42)
- 
-val_scores = [0] * n_splits
- 
-sub = x_test.copy()
-sub['value'] = 0
- 
-feature_importances = pd.DataFrame(index=x_train.columns)
- 
-for i, (fit_idx, val_idx) in enumerate(cv.split(x_train, y_train)):    
-    X_fit = x_train.iloc[fit_idx]
-    y_fit = y_train.iloc[fit_idx]
-    X_val = x_train.iloc[val_idx]
-    y_val = y_train.iloc[val_idx]
-    
-    model.fit(
-        X_fit,
-        y_fit,
-        eval_set=[(X_fit, y_fit), (X_val, y_val)],
-        eval_names=('fit', 'val'),
-        eval_metric='l2',
-        early_stopping_rounds=200,
-        feature_name=X_fit.columns.tolist(),
-        verbose=True
-    ) #
-    
-    val_scores[i] = np.sqrt(model.best_score_['val']['l2'])
-    sub['value'] += model.predict(x_test, num_iteration=model.best_iteration_)
-    feature_importances[i] = model.feature_importances_
-    
-    print('Fold {} RMSLE: {:.5f}'.format(i+1, val_scores[i]))
-    
-sub['value'] /= n_splits
-sub['value'] = np.expm1(sub['value'])
- 
-val_mean = np.mean(val_scores)
-val_std = np.std(val_scores)
- 
-print('Local RMSLE: {:.5f} (±{:.5f})'.format(val_mean, val_std))
-# 评估模型
-print('The smape score of prediction is:', getSMAPEScore(y_test,sub['value'])) # 计算真实值和预测值之间的均方根误差
-
